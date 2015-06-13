@@ -8,6 +8,7 @@ require("../inc/database.inc.php");
 require("../inc/json.inc.php");
 
 # Retrive URL arguments
+$devel = $_REQUEST['devel'];
 $x = $_REQUEST['x'];
 $y = $_REQUEST['y'];
 $srid = $_REQUEST['srid'];
@@ -29,21 +30,22 @@ $order = isset($_REQUEST['order']) ? " order by " . $_REQUEST['order'] : ' order
 #    . $parameters
 #    . $order
 #    . $limit;
+$srid2 = 3857;
 $sql = "SELECT " . $fields . ",
-    ST_Distance(ST_transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid ."), find_srid('', '" . $table . "', '" . $geometryfield . "')),
-    a.\"" . $geometryfield . "\") as distance
+    ST_Distance(ST_transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid ."), 3857),
+    ST_Transform(a.\"" . $geometryfield . "\", 3857)) as distance
     FROM " . $table . " a
-    WHERE ST_DWithin(a.\"" . $geometryfield . "\",
-    ST_Transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid . "), find_srid('', '" . $table . "', '" . $geometryfield . "')), " . $distance . ") "
+    WHERE ST_DWithin(ST_Transform(a.\"" . $geometryfield . "\", 3857),
+    ST_Transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid . "), 3857), " . $distance . ") "
     . $parameters
     . $order
     . $limit;
-echo $sql; die();
+if ($devel === "true") {
+	echo $sql; die();
+}
 $db = pgConnection();
 $statement=$db->prepare( $sql );
 $statement->execute();
 
 # send JSON or JSONP results
 sendJSON($statement);
-
-?>
