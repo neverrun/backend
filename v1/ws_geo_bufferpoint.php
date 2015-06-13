@@ -20,15 +20,25 @@ $limit = isset($_REQUEST['limit']) ? " limit " . $_REQUEST['limit'] : '';
 $order = isset($_REQUEST['order']) ? " order by " . $_REQUEST['order'] : ' order by distance ';
 
 # Perform the query
+#$sql = "SELECT " . $fields . ",
+#    ST_Distance(ST_transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid ."), find_srid('', '" . $table . "', '" . $geometryfield . "')),
+#    a." . $geometryfield . ") as distance
+#    FROM " . $table . " a
+#    WHERE ST_DWithin(a." . $geometryfield . ",
+#    ST_Transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid . "), find_srid('', '" . $table . "', '" . $geometryfield . "')), " . $distance . ") "
+#    . $parameters
+#    . $order
+#    . $limit;
 $sql = "SELECT " . $fields . ",
     ST_Distance(ST_transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid ."), find_srid('', '" . $table . "', '" . $geometryfield . "')),
-    a." . $geometryfield . ") as distance
+    a.\"" . $geometryfield . "\") as distance
     FROM " . $table . " a
-    WHERE ST_DWithin(a." . $geometryfield . ",
+    WHERE ST_DWithin(a.\"" . $geometryfield . "\",
     ST_Transform(ST_GeomFromText('POINT(" . $x . " " . $y . ")'," . $srid . "), find_srid('', '" . $table . "', '" . $geometryfield . "')), " . $distance . ") "
     . $parameters
     . $order
     . $limit;
+echo $sql; die();
 $db = pgConnection();
 $statement=$db->prepare( $sql );
 $statement->execute();
