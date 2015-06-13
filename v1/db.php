@@ -1,59 +1,33 @@
 <?php
 
-# Includes
-require("../inc/database.inc.php");
-require("../inc/json.inc.php");
+require("db_fcs.php");
+ini_set('memory_limit', '-1');
 
 $db = pgConnection();
-$fromTable = $_REQUEST['table'];
-$limit = 0;
+$table = $_REQUEST['table'];
+$data = new StdClass();
+$data->limit = 0;
 if (isset($_REQUEST['limit']))
-	$limit = intval($_REQUEST['limit']);
-$devel = null;
+	$data->limit = intval($_REQUEST['limit']);
+$data->devel = null;
 if (isset($_REQUEST['devel']))
-	$devel = $_REQUEST['devel'];
+	$data->devel = $_REQUEST['devel'];
 
-$fromLat = null;
-$fromLong = null;
-$toLat = null;
-$toLong = null;
+$data->fromLat = null;
+$data->fromLong = null;
+$data->toLat = null;
+$data->toLong = null;
 if (isset($_REQUEST['from_lat']) and isset($_REQUEST['to_lat'])
 	and isset($_REQUEST['from_long']) and isset($_REQUEST['to_long'])) {
-	$fromLat = $_REQUEST['from_lat'];
-	$fromLong = $_REQUEST['from_long'];
-	$toLat = $_REQUEST['to_lat'];
-	$toLong = $_REQUEST['to_long'];
+	$data->fromLat = $_REQUEST['from_lat'];
+	$data->fromLong = $_REQUEST['from_long'];
+	$data->toLat = $_REQUEST['to_lat'];
+	$data->toLong = $_REQUEST['to_long'];
 }
 
-// check table
-$sqlCheck = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='".$fromTable."')";
-$statementCheck = $db->prepare($sqlCheck);
-$statementCheck->execute();
-$resultCheck = $statementCheck->fetchAll(PDO::FETCH_ASSOC);
-$tableExists = $resultCheck[0]["exists"];
-
-if (!$tableExists) {
+if (!checkTable($table)) {
 	header('HTTP/1.0 404 Not Found');
 	die("404 Not Found");
 }
 
-// Perform the query
-$sql = "select * from ".$fromTable;
-
-if ($fromTable === "stops" and is_numeric($fromLat) and is_numeric($fromLong)
-	and is_numeric($toLat) and is_numeric($toLong)) {
-	$sql .= " where stop_lat >= ".$fromLat." and stop_lat <= ".$toLat.
-		" and stop_lon >= " . $fromLong ." and stop_lon <= ".$toLong;
-}
-
-if ($limit != 0) $sql .= " limit ".$limit;
-
-if ($devel === "true") {
-	echo $sql; die();
-}
-
-$statement=$db->prepare($sql);
-$statement->execute();
-
-// send JSON or JSONP results
-sendJSON($statement);
+processTable($table, $data);
