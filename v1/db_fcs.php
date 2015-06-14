@@ -20,9 +20,11 @@ function execSql($sql) {
 }
 
 function processTable($table, $data) {
-	if ($table === "routes") {
-		processTableRoutes($data);
-	} elseif ($table === "stops") {
+	if ($table === "pid_routes") {
+		processTableRoutes2($data);
+	} else if ($table === "pid_vehicles") {
+		processTableVehicles($data);
+	} elseif ($table === "pid_stops") {
 		processTableStops($data);
 	} else {
 		processTableSimple($table, $data);
@@ -36,12 +38,28 @@ function processTableSimple($table, $data) {
 	sendJSON(execSql($sql));
 }
 
+function processTableVehicles($data) {
+	$sql = "select \"vehicleId\", \"latitude\" as lat, \"longitude\" as lon, \"vehicleType\", \"vehicleTypeInternal\" as \"routeId\" from pid_vehicles";
+	if (is_numeric($data->fromLat) and is_numeric($data->fromLong)
+			and is_numeric($data->toLat) and is_numeric($data->toLong)) {
+		$sql .= " where latitude >= ".$data->fromLat." and latitude <= ".$data->toLat.
+			" and longitude >= " . $data->fromLong ." and longitude <= ".$data->toLong;
+	}
+	if ($data->limit != 0) $sql .= " limit ".$data->limit;
+	if ($data->devel === "true") {
+		echo $sql; die();
+	}
+	sendJSON(execSql($sql));
+}
+
+
 function processTableStops($data) {
-	$sql = "select * from stops";
+	$sql = "select \"stop_lat\" as lat, \"stop_lon\" as lon, \"stopName\" from pid_stops";
 	if (is_numeric($data->fromLat) and is_numeric($data->fromLong)
 			and is_numeric($data->toLat) and is_numeric($data->toLong)) {
 		$sql .= " where stop_lat >= ".$data->fromLat." and stop_lat <= ".$data->toLat.
 			" and stop_lon >= " . $data->fromLong ." and stop_lon <= ".$data->toLong;
+		$sql .= " and \"isRootStop\" = 1";
 	}
 	if ($data->limit != 0) $sql .= " limit ".$data->limit;
 	if ($data->devel === "true") {
@@ -51,21 +69,54 @@ function processTableStops($data) {
 }
 
 function processTableRoutes($data) {
-	$table = "pid_shapes";
+	$table = "pid_routes";
 	//$lat = "shape_pt_lat";
 	//$long = "shape_pt_lon";
 	$lat = "pointLat";
 	$long = "pointLon";
-	$sql = "select ".$lat." as lat, ".$long." as lon from ".$table;
+	$sql = "select \"".$lat."\" as lat, \"".$long."\" as lon from ".$table;
 	if (is_numeric($data->fromLat) and is_numeric($data->fromLong)
 			and is_numeric($data->toLat) and is_numeric($data->toLong)) {
 		//$sql .= " where shape_id = 1";
-		$sql .= " where ".$lat.">= ".$data->fromLat." and ".$lat." <= ".$data->toLat.
-			" and ".$long." >= " . $data->fromLong ." and ".$long." <= ".$data->toLong;
+		$sql .= " where \"".$lat."\">= ".$data->fromLat." and \"".$lat."\" <= ".$data->toLat.
+			" and \"".$long."\" >= " . $data->fromLong ." and \"".$long."\" <= ".$data->toLong;
 	}
 	if ($data->limit != 0) $sql .= " limit ".$data->limit;
 	if ($data->devel === "true") {
 		echo $sql; die();
 	}
 	sendJSON(execSql($sql));
+}
+
+function processTableRoutes2($data) {
+	$table = "pid_routes";
+	//$lat = "shape_pt_lat";
+	//$long = "shape_pt_lon";
+	$lat = "pointLat";
+	$long = "pointLon";
+	$sql = "select \"routeId\", \"".$lat."\" as lat, \"".$long."\" as lon from ".$table;
+	if (is_numeric($data->fromLat) and is_numeric($data->fromLong)
+			and is_numeric($data->toLat) and is_numeric($data->toLong)) {
+		//$sql .= " where shape_id = 1";
+		$sql .= " where \"".$lat."\">= ".$data->fromLat." and \"".$lat."\" <= ".$data->toLat.
+			" and \"".$long."\" >= " . $data->fromLong ." and \"".$long."\" <= ".$data->toLong;
+	}
+	if ($data->limit != 0) $sql .= " limit ".$data->limit;
+	if ($data->devel === "true") {
+		echo $sql; die();
+	}
+	$db = pgConnection();
+	$statement = $db->prepare($sql);
+	$statement->execute();
+	$results = $statement->fetchAll(PDO::FETCH_ASSOC);
+	$resultsImp = array();
+	foreach ($results as $result) {
+		$coords = new StdClass();
+		$coords->lat = $result['lat'];
+		$coords->lon = $result['lon'];
+		$resultsImp[$result['routeId']][] = $coords;
+	}
+	header('content-type: application/json; charset=utf-8');
+	header("access-control-allow-origin: *");
+	echo json_encode($resultsImp);
 }

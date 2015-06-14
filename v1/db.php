@@ -25,7 +25,7 @@ if (isset($_REQUEST['from_lat']) and isset($_REQUEST['to_lat'])
 	$data->toLong = $_REQUEST['to_long'];
 }
 
-if (!checkTable($table)) {
+if (!checkTable($table) and $table !== "pid_routes2") {
 	header('HTTP/1.0 404 Not Found');
 	die("404 Not Found");
 }
